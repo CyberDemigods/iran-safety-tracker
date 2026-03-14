@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Iran Safety Tracker — How safe is your area?</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -495,11 +496,11 @@ function init() {
     'ESRI Satellite': esri
   }).addTo(map);
 
-  // Click handler — set location
+  // Click handler — set location (no auto-zoom)
   map.on('click', function(e) {
     document.getElementById('user-lat').value = e.latlng.lat.toFixed(5);
     document.getElementById('user-lon').value = e.latlng.lng.toFixed(5);
-    setLocation();
+    setLocation(false);
   });
 
   // Check for saved location
@@ -523,7 +524,7 @@ function dismissOnboarding() {
 }
 
 // ── Location ──
-function setLocation() {
+function setLocation(autoZoom = true) {
   const lat = parseFloat(document.getElementById('user-lat').value);
   const lon = parseFloat(document.getElementById('user-lon').value);
   if (isNaN(lat) || isNaN(lon) || lat < 24 || lat > 40 || lon < 44 || lon > 64) {
@@ -568,8 +569,10 @@ function setLocation() {
     mapLayers.circles.push(circle);
   });
 
-  // Zoom to fit radius
-  map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] });
+  // Zoom to fit radius (only on button click or first load, not on map click)
+  if (autoZoom) {
+    map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] });
+  }
 
   document.getElementById('current-loc').innerHTML = `${t('location')}: <b>${lat.toFixed(5)}, ${lon.toFixed(5)}</b> | ${t('radius')}: <b>${searchRadius} km</b>`;
   document.getElementById('stats-bar').style.display = 'flex';
