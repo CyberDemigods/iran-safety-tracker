@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iran Safety Tracker — How safe is your area?</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; }
+
+#app { display: flex; height: 100vh; }
+#sidebar { width: 380px; background: #16213e; overflow-y: auto; border-right: 2px solid #0f3460; display: flex; flex-direction: column; }
+#map { flex: 1; }
+
+.sidebar-header { padding: 16px; background: #0f3460; text-align: center; }
+.sidebar-header h1 { font-size: 17px; color: #e94560; margin-bottom: 4px; }
+.sidebar-header .subtitle { font-size: 11px; color: #888; line-height: 1.4; }
+.sidebar-header a { color: #7ec8e3; text-decoration: none; }
+.sidebar-header a:hover { text-decoration: underline; }
+
+/* Location input */
+.location-box { padding: 14px 16px; background: #0d1b36; border-bottom: 1px solid #0f3460; }
+.location-box .label { font-size: 11px; color: #e94560; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.location-box .hint { font-size: 11px; color: #666; margin-bottom: 8px; }
+.location-box .coord-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.location-box input { flex: 1; padding: 7px 10px; background: #1a1a40; border: 1px solid #333; color: #e0e0e0; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.location-box input:focus { border-color: #e94560; outline: none; }
+.location-box button { width: 100%; padding: 8px; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+.location-box button:hover { background: #c0392b; }
+.location-box .current-loc { font-size: 11px; color: #888; margin-top: 6px; text-align: center; }
+.location-box .current-loc b { color: #e94560; }
+
+/* Stats */
+.stats { display: flex; gap: 0; text-align: center; border-bottom: 1px solid #0f3460; }
+.stat { flex: 1; padding: 10px 8px; border-right: 1px solid #0f3460; }
+.stat:last-child { border-right: none; }
+.stat .stat-val { font-size: 20px; font-weight: 700; color: #e94560; }
+.stat .stat-label { font-size: 9px; color: #666; text-transform: uppercase; }
+
+/* Safety indicator */
+.safety-bar { padding: 12px 16px; border-bottom: 1px solid #0f3460; text-align: center; }
+.safety-level { font-size: 16px; font-weight: 700; padding: 8px 16px; border-radius: 6px; display: inline-block; }
+.safety-critical { background: #c0392b; color: #fff; }
+.safety-high { background: #e74c3c; color: #fff; }
+.safety-elevated { background: #f39c12; color: #000; }
+.safety-moderate { background: #f1c40f; color: #000; }
+.safety-low { background: #27ae60; color: #fff; }
+.safety-detail { font-size: 11px; color: #888; margin-top: 6px; }
+
+/* Sections */
+.section { border-bottom: 1px solid #0f3460; }
+.section-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+.section-header:hover { background: #1a1a40; }
+.section-header h2 { font-size: 14px; color: #e94560; margin: 0; display: flex; align-items: center; gap: 8px; }
+.section-header .count { background: #e94560; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.section-header .arrow { color: #e94560; font-size: 12px; transition: transform 0.2s; }
+.section-header .arrow.open { transform: rotate(90deg); }
+.section-body { padding: 0 16px 12px; display: none; }
+.section-body.open { display: block; }
+
+/* Items */
+.item { background: #1a1a40; border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s; font-size: 13px; }
+.item:hover { background: #233; }
+.item .item-name { font-weight: 600; }
+.item .item-dist { color: #e94560; font-size: 12px; margin-top: 2px; }
+.item .item-date { color: #888; font-size: 11px; }
+.item .item-src { color: #666; font-size: 11px; font-style: italic; }
+
+/* Filter bar */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.filter-btn { padding: 3px 8px; font-size: 10px; border: 1px solid #333; background: #1a1a40; color: #aaa; border-radius: 3px; cursor: pointer; }
+.filter-btn.active { border-color: #e94560; color: #fff; }
+.filter-btn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+/* Type badges */
+.type-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+.type-military { background: #c0392b; color: #fff; }
+.type-police { background: #2980b9; color: #fff; }
+.type-nuclear { background: #f39c12; color: #000; }
+.type-government { background: #8e44ad; color: #fff; }
+.type-airfield { background: #d35400; color: #fff; }
+.type-mosque { background: #27ae60; color: #fff; }
+.type-basij { background: #ff9100; color: #000; }
+.type-prison { background: #9c27b0; color: #fff; }
+.type-radar { background: #00bcd4; color: #000; }
+.type-missile { background: #f44336; color: #fff; }
+.type-strike { background: #ff1744; color: #fff; }
+
+/* Onboarding overlay */
+.onboarding { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.onboarding.hidden { display: none; }
+.onboarding-box { background: #16213e; border: 2px solid #e94560; border-radius: 12px; padding: 32px; max-width: 460px; text-align: center; }
+.onboarding-box h2 { color: #e94560; font-size: 22px; margin-bottom: 12px; }
+.onboarding-box p { font-size: 14px; color: #ccc; line-height: 1.5; margin-bottom: 16px; }
+.onboarding-box button { padding: 12px 32px; background: #e94560; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; font-family: inherit; }
+.onboarding-box button:hover { background: #c0392b; }
+.onboarding-box .privacy { font-size: 10px; color: #666; margin-top: 12px; }
+
+/* Legend */
+.legend { padding: 12px 16px; border-top: 1px solid #0f3460; margin-top: auto; }
+.legend h3 { font-size: 12px; color: #888; margin-bottom: 6px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 3px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+/* Loading */
+.loading { padding: 12px 16px; text-align: center; color: #888; font-size: 12px; }
+
+/* Radius selector */
+.radius-select { display: flex; gap: 0; margin-bottom: 6px; }
+.radius-btn { flex: 1; padding: 5px 0; font-size: 11px; border: 1px solid #0f3460; background: #1a1a40; color: #888; cursor: pointer; font-family: inherit; }
+.radius-btn:first-child { border-radius: 4px 0 0 4px; }
+.radius-btn:last-child { border-radius: 0 4px 4px 0; }
+.radius-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+/* Language switcher */
+.lang-switch { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; gap: 0; }
+.lang-btn { padding: 6px 12px; font-size: 12px; border: 1px solid #0f3460; background: #16213e; color: #888; cursor: pointer; font-family: inherit; }
+.lang-btn:first-child { border-radius: 4px 0 0 4px; }
+.lang-btn:last-child { border-radius: 0 4px 4px 0; }
+.lang-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+/* RTL support */
+html[dir="rtl"] #sidebar { border-right: none; border-left: 2px solid #0f3460; }
+html[dir="rtl"] .item-dist { direction: ltr; text-align: right; }
+html[dir="rtl"] .stat-val { direction: ltr; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  #app { flex-direction: column; }
+  #sidebar { width: 100%; height: 45vh; order: 2; }
+  #map { height: 55vh; order: 1; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h1>IRAN SAFETY TRACKER</h1>
+      <div class="subtitle">How safe is your area? Set your location and see nearby threats.<br>
+      Data: <a href="https://mahsaalert.app" target="_blank">MahsaAlert</a> |
+      <a href="https://iranrevolution26.com" target="_blank">iranrevolution26.com</a></div>
+    </div>
+
+    <div class="location-box">
+      <div class="label">Your Location</div>
+      <div class="hint">Enter coordinates or click on the map to set your point</div>
+      <div class="coord-row">
+        <input type="text" id="user-lat" placeholder="Latitude (e.g. 32.6647)">
+        <input type="text" id="user-lon" placeholder="Longitude (e.g. 51.7159)">
+      </div>
+      <div class="radius-select">
+        <button class="radius-btn" onclick="setRadius(10)">10 km</button>
+        <button class="radius-btn active" onclick="setRadius(30)">30 km</button>
+        <button class="radius-btn" onclick="setRadius(50)">50 km</button>
+        <button class="radius-btn" onclick="setRadius(100)">100 km</button>
+      </div>
+      <button onclick="setLocation()">Set My Location</button>
+      <div class="current-loc" id="current-loc"></div>
+    </div>
+
+    <div class="safety-bar" id="safety-bar" style="display:none;">
+      <div class="safety-level" id="safety-level">—</div>
+      <div class="safety-detail" id="safety-detail"></div>
+    </div>
+
+    <div class="stats" id="stats-bar" style="display:none;">
+      <div class="stat">
+        <div class="stat-val" id="stat-strikes">0</div>
+        <div class="stat-label">Strikes nearby</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-targets">0</div>
+        <div class="stat-label">Targets nearby</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-nearest">—</div>
+        <div class="stat-label">Nearest (km)</div>
+      </div>
+    </div>
+
+    <div class="section" id="strikes-section">
+      <div class="section-header" onclick="toggleSection('strikes')">
+        <h2>Strikes <span class="count" id="strikes-count">0</span></h2>
+        <span class="arrow open" id="strikes-arrow">&#9654;</span>
+      </div>
+      <div class="section-body open" id="strikes-body">
+        <div id="strikes-list"><div class="loading">Set your location to see nearby strikes</div></div>
+      </div>
+    </div>
+
+    <div class="section" id="targets-section">
+      <div class="section-header" onclick="toggleSection('targets')">
+        <h2>Nearby Targets <span class="count" id="targets-count">0</span></h2>
+        <span class="arrow" id="targets-arrow">&#9654;</span>
+      </div>
+      <div class="section-body" id="targets-body">
+        <div class="filter-bar" id="filter-bar"></div>
+        <div id="targets-list"><div class="loading">Potential targets within your radius</div></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h3>Legend</h3>
+      <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div> Your Location</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div> Confirmed Strike</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> Military Base</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2980b9"></div> Police Station</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff9100"></div> Basij Base</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div> Nuclear Site</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div> Missile Base</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00bcd4"></div> Radar</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d35400"></div> Airfield / Drone Base</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#9c27b0"></div> Prison</div>
+      <div class="legend-item" style="margin-top:8px; font-size:10px; color:#666;">Data: MahsaAlert.app | No data is stored or sent</div>
+    </div>
+  </div>
+  <div id="map">
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('fa')">فارسی</button>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding overlay -->
+<div class="onboarding" id="onboarding">
+  <div class="onboarding-box">
+    <h2>Iran Safety Tracker</h2>
+    <p>This tool shows confirmed airstrikes and potential military targets near your location in Iran.</p>
+    <p>Click on the map or enter your coordinates to see what's happening within 30 km of you.</p>
+    <p style="font-size:12px; color:#e94560;">All data comes from <b>MahsaAlert.app</b> — an open-source OSINT platform.</p>
+    <button onclick="dismissOnboarding()">Open Map</button>
+    <div class="privacy">No location data is stored or transmitted. Everything runs in your browser.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── i18n ──
+let currentLang = 'en';
+
+const i18n = {
+  en: {
+    title: 'IRAN SAFETY TRACKER',
+    subtitle: 'How safe is your area? Set your location and see nearby threats.',
+    yourLocation: 'Your Location',
+    hint: 'Enter coordinates or click on the map to set your point',
+    setMyLocation: 'Set My Location',
+    strikes: 'Strikes',
+    strikesNearby: 'Strikes nearby',
+    targets: 'Nearby Targets',
+    targetsNearby: 'Targets nearby',
+    nearestKm: 'Nearest (km)',
+    setLocationPrompt: 'Set your location to see nearby strikes',
+    targetsPrompt: 'Potential targets within your radius',
+    noStrikes: 'No confirmed strikes within',
+    noTargets: 'No known targets within',
+    fromYou: 'from you',
+    unknownDate: 'Unknown date',
+    legend: 'Legend',
+    yourLoc: 'Your Location',
+    confirmedStrike: 'Confirmed Strike',
+    militaryBase: 'Military Base',
+    policeStation: 'Police Station',
+    basijBase: 'Basij Base',
+    nuclearSite: 'Nuclear Site',
+    missileBase: 'Missile Base',
+    airfield: 'Airfield / Drone Base',
+    radar: 'Radar',
+    prison: 'Prison',
+    dataNote: 'Data: MahsaAlert.app | No data is stored or sent',
+    onboardingTitle: 'Iran Safety Tracker',
+    onboardingP1: 'This tool shows confirmed airstrikes and potential military targets near your location in Iran.',
+    onboardingP2: 'Click on the map or enter your coordinates to see what\'s happening within 30 km of you.',
+    onboardingP3: 'All data comes from <b>MahsaAlert.app</b> — an open-source OSINT platform.',
+    openMap: 'Open Map',
+    privacy: 'No location data is stored or transmitted. Everything runs in your browser.',
+    criticalDanger: 'CRITICAL DANGER',
+    highRisk: 'HIGH RISK',
+    elevatedRisk: 'ELEVATED RISK',
+    moderateRisk: 'MODERATE RISK',
+    lowerRisk: 'LOWER RISK',
+    seekShelter: 'from you. Seek shelter immediately.',
+    stayAwayWindows: 'Stay away from windows. Prepare emergency supplies.',
+    stayAlert: 'potential targets nearby. Stay alert.',
+    potentialTargets: 'potential targets in area.',
+    relativelyDistant: 'Relatively distant from confirmed strikes.',
+    invalidCoords: 'Invalid coordinates. Must be within Iran.',
+    location: 'Location',
+    radius: 'Radius',
+    nearestStrike: 'Nearest strike',
+    filterLabels: { military: 'Military', police: 'Police', basij: 'Basij', nuclear: 'Nuclear', missile: 'Missile', radar: 'Radar', airfield: 'Airfield', prison: 'Prison' },
+  },
+  fa: {
+    title: 'ردیاب امنیت ایران',
+    subtitle: 'منطقه شما چقدر امن است؟ موقعیت خود را مشخص کنید.',
+    yourLocation: 'موقعیت شما',
+    hint: 'مختصات را وارد کنید یا روی نقشه کلیک کنید',
+    setMyLocation: 'تنظیم موقعیت من',
+    strikes: 'حملات',
+    strikesNearby: 'حملات نزدیک',
+    targets: 'اهداف نزدیک',
+    targetsNearby: 'اهداف نزدیک',
+    nearestKm: 'نزدیک‌ترین (km)',
+    setLocationPrompt: 'موقعیت خود را تنظیم کنید تا حملات نزدیک را ببینید',
+    targetsPrompt: 'اهداف بالقوه در شعاع شما',
+    noStrikes: 'هیچ حمله تایید شده‌ای در',
+    noTargets: 'هیچ هدف شناخته شده‌ای در',
+    fromYou: 'از شما',
+    unknownDate: 'تاریخ نامشخص',
+    legend: 'راهنما',
+    yourLoc: 'موقعیت شما',
+    confirmedStrike: 'حمله تایید شده',
+    militaryBase: 'پایگاه نظامی',
+    policeStation: 'کلانتری',
+    basijBase: 'پایگاه بسیج',
+    nuclearSite: 'تاسیسات هسته‌ای',
+    missileBase: 'پایگاه موشکی',
+    airfield: 'پایگاه هوایی / پهپادی',
+    radar: 'رادار',
+    prison: 'زندان',
+    dataNote: 'داده: MahsaAlert.app | هیچ اطلاعاتی ذخیره یا ارسال نمی‌شود',
+    onboardingTitle: 'ردیاب امنیت ایران',
+    onboardingP1: 'این ابزار حملات هوایی تایید شده و اهداف نظامی بالقوه نزدیک موقعیت شما در ایران را نشان می‌دهد.',
+    onboardingP2: 'روی نقشه کلیک کنید یا مختصات خود را وارد کنید تا ببینید در ۳۰ کیلومتری شما چه اتفاقی می‌افتد.',
+    onboardingP3: 'تمام داده‌ها از <b>MahsaAlert.app</b> — یک پلتفرم اطلاعاتی منبع‌باز — می‌آید.',
+    openMap: 'باز کردن نقشه',
+    privacy: 'هیچ اطلاعات مکانی ذخیره یا ارسال نمی‌شود. همه چیز در مرورگر شما اجرا می‌شود.',
+    criticalDanger: 'خطر بحرانی',
+    highRisk: 'خطر بالا',
+    elevatedRisk: 'خطر افزایش یافته',
+    moderateRisk: 'خطر متوسط',
+    lowerRisk: 'خطر کمتر',
+    seekShelter: 'از شما. فوراً به پناهگاه بروید.',
+    stayAwayWindows: 'از پنجره‌ها دور بمانید. لوازم اضطراری آماده کنید.',
+    stayAlert: 'هدف بالقوه در نزدیکی. هوشیار باشید.',
+    potentialTargets: 'هدف بالقوه در منطقه.',
+    relativelyDistant: 'نسبتاً دور از حملات تایید شده.',
+    invalidCoords: 'مختصات نامعتبر. باید در محدوده ایران باشد.',
+    location: 'موقعیت',
+    radius: 'شعاع',
+    nearestStrike: 'نزدیک‌ترین حمله',
+    filterLabels: { military: 'نظامی', police: 'انتظامی', basij: 'بسیج', nuclear: 'هسته‌ای', missile: 'موشکی', radar: 'رادار', airfield: 'هوایی', prison: 'زندان' },
+  }
+};
+
+function t(key) { return i18n[currentLang][key] || i18n.en[key] || key; }
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === (lang === 'en' ? 'EN' : 'فارسی'));
+  });
+  localStorage.setItem('safety_tracker_lang', lang);
+  applyTranslations();
+  if (userLat !== null) renderAll();
+}
+
+function applyTranslations() {
+  // Header
+  document.querySelector('.sidebar-header h1').textContent = t('title');
+  document.querySelector('.sidebar-header .subtitle').innerHTML =
+    t('subtitle') + '<br>Data: <a href="https://mahsaalert.app" target="_blank">MahsaAlert</a> | <a href="https://iranrevolution26.com" target="_blank">iranrevolution26.com</a>';
+
+  // Location box
+  document.querySelector('.location-box .label').textContent = t('yourLocation');
+  document.querySelector('.location-box .hint').textContent = t('hint');
+  document.querySelector('.location-box button:not(.radius-btn)').textContent = t('setMyLocation');
+
+  // Stats
+  document.querySelectorAll('.stat-label')[0].textContent = t('strikesNearby');
+  document.querySelectorAll('.stat-label')[1].textContent = t('targetsNearby');
+  document.querySelectorAll('.stat-label')[2].textContent = t('nearestKm');
+
+  // Section headers
+  document.querySelector('#strikes-section h2').innerHTML = t('strikes') + ' <span class="count" id="strikes-count">0</span>';
+  document.querySelector('#targets-section h2').innerHTML = t('targets') + ' <span class="count" id="targets-count">0</span>';
+
+  // Legend
+  document.querySelector('.legend h3').textContent = t('legend');
+  const legendItems = document.querySelectorAll('.legend .legend-item');
+  const legendKeys = ['yourLoc', 'confirmedStrike', 'militaryBase', 'policeStation', 'basijBase', 'nuclearSite', 'missileBase', 'radar', 'airfield', 'prison'];
+  legendItems.forEach((item, i) => {
+    if (i < legendKeys.length) {
+      const dot = item.querySelector('.legend-dot');
+      item.innerHTML = '';
+      item.appendChild(dot);
+      item.append(' ' + t(legendKeys[i]));
+    }
+  });
+  // Data note
+  const lastLegend = document.querySelector('.legend .legend-item:last-child');
+  if (lastLegend && lastLegend.style.fontSize) lastLegend.textContent = t('dataNote');
+
+  // Onboarding
+  const ob = document.querySelector('.onboarding-box');
+  if (ob) {
+    ob.querySelector('h2').textContent = t('onboardingTitle');
+    const ps = ob.querySelectorAll('p');
+    if (ps[0]) ps[0].textContent = t('onboardingP1');
+    if (ps[1]) ps[1].textContent = t('onboardingP2');
+    if (ps[2]) ps[2].innerHTML = t('onboardingP3');
+    ob.querySelector('button').textContent = t('openMap');
+    ob.querySelector('.privacy').textContent = t('privacy');
+  }
+}
+
+// ── State ──
+let map, userMarker, radiusCircle;
+let userLat = null, userLon = null;
+let searchRadius = 30; // km
+const mapLayers = { strikes: [], targets: [], circles: [] };
+
+// MahsaAlert layer data
+const MAHSA_LAYERS_URL = 'https://api.mahsaalert.app/api/v1/layers';
+const MAHSA_STORAGE = 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/';
+let allStrikes = [];  // from layer 32
+let allTargets = [];  // from other layers
+
+const LAYER_CONFIG = {
+  1:  { type: 'basij',    name: 'Basij',              color: '#ff9100', size: 5 },
+  3:  { type: 'police',   name: 'Police',             color: '#2980b9', size: 5 },
+  5:  { type: 'prison',   name: 'Prison',             color: '#9c27b0', size: 5 },
+  6:  { type: 'nuclear',  name: 'Nuclear',            color: '#f39c12', size: 7 },
+  7:  { type: 'missile',  name: 'Missile Program',    color: '#f44336', size: 7 },
+  9:  { type: 'radar',    name: 'Radar',              color: '#00bcd4', size: 5 },
+  10: { type: 'airfield', name: 'Air/Drone Base',     color: '#d35400', size: 7 },
+  11: { type: 'military', name: 'Military (confirmed)', color: '#c0392b', size: 7 },
+  12: { type: 'military', name: 'Military (unconfirmed)', color: '#e57373', size: 5 },
+  32: { type: 'strike',   name: 'War Strikes',        color: '#ff1744', size: 9 },
+};
+
+const TYPE_COLORS = {
+  basij: '#ff9100', police: '#2980b9', prison: '#9c27b0', nuclear: '#f39c12',
+  missile: '#f44336', radar: '#00bcd4', airfield: '#d35400', military: '#c0392b',
+  strike: '#ff1744', default: '#888'
+};
+
+// ── Haversine ──
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371, p = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * p / 2) ** 2 +
+            Math.cos(lat1 * p) * Math.cos(lat2 * p) *
+            Math.sin((lon2 - lon1) * p / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function formatDist(km) {
+  return km < 1 ? (km * 1000).toFixed(0) + ' m' : km.toFixed(1) + ' km';
+}
+
+// ── Icons ──
+function makeIcon(color, size = 10) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:${size}px;height:${size}px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px ${color};"></div>`,
+    iconSize: [size, size], iconAnchor: [size/2, size/2]
+  });
+}
+
+function makeStrikeIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:32px;height:32px;position:relative;">
+      <div style="position:absolute;inset:0;background:#ff4444;border-radius:50%;opacity:0.3;animation:pulse 2s infinite;"></div>
+      <div style="position:absolute;top:5px;left:5px;width:22px;height:22px;background:#ff4444;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px #ff4444;"></div>
+      <div style="position:absolute;top:12px;left:10px;width:12px;height:8px;color:#fff;font-size:8px;font-weight:bold;text-align:center;line-height:8px;">&#10006;</div>
+    </div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16]
+  });
+}
+
+function makeUserIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:28px;height:28px;position:relative;">
+      <div style="position:absolute;inset:0;background:#e94560;border-radius:50%;opacity:0.3;animation:pulse 1.5s infinite;"></div>
+      <div style="position:absolute;top:4px;left:4px;width:20px;height:20px;background:#e94560;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px #e94560;"></div>
+    </div>`,
+    iconSize: [28, 28], iconAnchor: [14, 14]
+  });
+}
+
+// ── Init ──
+function init() {
+  map = L.map('map', { zoomControl: true }).setView([32.5, 53.0], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap', maxZoom: 19
+  }).addTo(map);
+
+  const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri', maxZoom: 18
+  });
+  const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    attribution: '&copy; Google', maxZoom: 20
+  });
+
+  L.control.layers({
+    'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map),
+    'Google Hybrid': googleHybrid,
+    'ESRI Satellite': esri
+  }).addTo(map);
+
+  // Click handler — set location
+  map.on('click', function(e) {
+    document.getElementById('user-lat').value = e.latlng.lat.toFixed(5);
+    document.getElementById('user-lon').value = e.latlng.lng.toFixed(5);
+    setLocation();
+  });
+
+  // Check for saved location
+  const saved = localStorage.getItem('safety_tracker_loc');
+  if (saved) {
+    const loc = JSON.parse(saved);
+    document.getElementById('user-lat').value = loc.lat;
+    document.getElementById('user-lon').value = loc.lon;
+    if (loc.radius) searchRadius = loc.radius;
+    updateRadiusButtons();
+    dismissOnboarding();
+    setLocation();
+  }
+
+  // Load MahsaAlert data
+  loadAllMahsaData();
+}
+
+function dismissOnboarding() {
+  document.getElementById('onboarding').classList.add('hidden');
+}
+
+// ── Location ──
+function setLocation() {
+  const lat = parseFloat(document.getElementById('user-lat').value);
+  const lon = parseFloat(document.getElementById('user-lon').value);
+  if (isNaN(lat) || isNaN(lon) || lat < 24 || lat > 40 || lon < 44 || lon > 64) {
+    document.getElementById('current-loc').innerHTML = '<span style="color:#e94560">' + t('invalidCoords') + '</span>';
+    return;
+  }
+
+  userLat = lat;
+  userLon = lon;
+  dismissOnboarding();
+
+  // Save
+  localStorage.setItem('safety_tracker_loc', JSON.stringify({ lat, lon, radius: searchRadius }));
+
+  // Update map
+  if (userMarker) map.removeLayer(userMarker);
+  if (radiusCircle) map.removeLayer(radiusCircle);
+  mapLayers.circles.forEach(c => map.removeLayer(c));
+  mapLayers.circles = [];
+
+  userMarker = L.marker([lat, lon], { icon: makeUserIcon(), zIndexOffset: 1000 })
+    .bindPopup(`<b>YOUR LOCATION</b><br>${lat.toFixed(5)}, ${lon.toFixed(5)}`)
+    .addTo(map);
+
+  // Radius circle
+  radiusCircle = L.circle([lat, lon], {
+    radius: searchRadius * 1000, color: '#e94560', fillColor: '#e94560',
+    fillOpacity: 0.05, weight: 2, opacity: 0.6, dashArray: '8,4'
+  }).addTo(map);
+
+  // Distance rings
+  const rings = searchRadius <= 10 ? [1, 3, 5, 10] :
+                searchRadius <= 30 ? [1, 5, 10, 20, 30] :
+                searchRadius <= 50 ? [5, 10, 20, 30, 50] :
+                [10, 20, 30, 50, 100];
+  rings.filter(r => r <= searchRadius).forEach(r => {
+    const circle = L.circle([lat, lon], {
+      radius: r * 1000, color: '#e94560', fillColor: 'transparent',
+      weight: 1, opacity: 0.3, dashArray: '5,5'
+    }).bindTooltip(`${r} km`, { permanent: true, direction: 'top', className: 'dist-label' })
+     .addTo(map);
+    mapLayers.circles.push(circle);
+  });
+
+  // Zoom to fit radius
+  map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] });
+
+  document.getElementById('current-loc').innerHTML = `${t('location')}: <b>${lat.toFixed(5)}, ${lon.toFixed(5)}</b> | ${t('radius')}: <b>${searchRadius} km</b>`;
+  document.getElementById('stats-bar').style.display = 'flex';
+  document.getElementById('safety-bar').style.display = 'block';
+
+  renderAll();
+}
+
+function setRadius(km) {
+  searchRadius = km;
+  updateRadiusButtons();
+  if (userLat !== null) setLocation();
+}
+
+function updateRadiusButtons() {
+  document.querySelectorAll('.radius-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.textContent) === searchRadius);
+  });
+}
+
+// ── Load MahsaAlert Data ──
+async function loadAllMahsaData() {
+  try {
+    const resp = await fetch(MAHSA_LAYERS_URL);
+    const result = await resp.json();
+    const layers = result.data || [];
+
+    // Load all layers in parallel
+    const promises = layers
+      .filter(l => l.geojson && l.geojson.url && LAYER_CONFIG[l.id])
+      .map(async (layer) => {
+        try {
+          const r = await fetch(layer.geojson.url);
+          const geojson = await r.json();
+          const config = LAYER_CONFIG[layer.id];
+          const features = geojson.features || [];
+
+          features.forEach(feat => {
+            if (!feat.geometry || feat.geometry.type !== 'Point') return;
+            const [lon, lat] = feat.geometry.coordinates;
+            const props = feat.properties || {};
+
+            const item = {
+              lat, lon,
+              name: props['name:fa'] || props.name || 'Unknown',
+              type: config.type,
+              layerId: layer.id,
+              status: props.status || '',
+              accurate: props.accurate || 'no',
+              sources: props.sources || '',
+              mahsaId: props.id || ''
+            };
+
+            // Parse date for strikes
+            if (layer.id === 32) {
+              const ts = props.date;
+              if (ts) {
+                const unix = typeof ts === 'string' && ts.includes('-')
+                  ? parseInt(ts.split('-')[0]) : parseInt(ts);
+                const d = new Date(unix * 1000);
+                item.date = d.toISOString().slice(0, 10);
+                item.time = d.toISOString().slice(11, 16);
+              } else {
+                item.date = '';
+                item.time = '';
+              }
+              allStrikes.push(item);
+            } else {
+              allTargets.push(item);
+            }
+          });
+        } catch (e) {
+          console.warn(`Failed to load layer ${layer.id}:`, e);
+        }
+      });
+
+    await Promise.all(promises);
+    console.log(`Loaded ${allStrikes.length} strikes, ${allTargets.length} targets from MahsaAlert`);
+
+    if (userLat !== null) renderAll();
+  } catch (e) {
+    console.error('MahsaAlert API error:', e);
+  }
+}
+
+// ── Filters ──
+let activeFilters = new Set(['military', 'police', 'basij', 'nuclear', 'missile', 'radar', 'airfield', 'prison']);
+
+function toggleFilter(type) {
+  if (activeFilters.has(type)) activeFilters.delete(type);
+  else activeFilters.add(type);
+  renderAll();
+}
+
+function buildFilterBar() {
+  const types = ['military', 'police', 'basij', 'nuclear', 'missile', 'radar', 'airfield', 'prison'];
+  const labels = t('filterLabels');
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = types.map(t => {
+    const color = TYPE_COLORS[t] || '#888';
+    const active = activeFilters.has(t) ? ' active' : '';
+    return `<button class="filter-btn${active}" onclick="event.stopPropagation();toggleFilter('${t}')"><span class="dot" style="background:${color}"></span>${labels[t]}</button>`;
+  }).join('');
+}
+
+// ── Render ──
+function renderAll() {
+  if (userLat === null || userLon === null) return;
+
+  // Clear old markers
+  mapLayers.strikes.forEach(m => map.removeLayer(m));
+  mapLayers.targets.forEach(m => map.removeLayer(m));
+  mapLayers.strikes = [];
+  mapLayers.targets = [];
+
+  // Filter strikes within radius
+  const nearbyStrikes = allStrikes
+    .filter(s => haversine(userLat, userLon, s.lat, s.lon) <= searchRadius)
+    .map(s => ({ ...s, dist: haversine(userLat, userLon, s.lat, s.lon) }))
+    .sort((a, b) => a.dist - b.dist);
+
+  // Filter targets within radius
+  const nearbyTargets = allTargets
+    .filter(tg => activeFilters.has(tg.type) && haversine(userLat, userLon, tg.lat, tg.lon) <= searchRadius)
+    .map(tg => ({ ...tg, dist: haversine(userLat, userLon, tg.lat, tg.lon) }))
+    .sort((a, b) => a.dist - b.dist);
+
+  // Render strikes
+  const strikesList = document.getElementById('strikes-list');
+  strikesList.innerHTML = '';
+  let nearestStrike = Infinity;
+
+  nearbyStrikes.forEach(s => {
+    if (s.dist < nearestStrike) nearestStrike = s.dist;
+
+    const marker = L.marker([s.lat, s.lon], { icon: makeStrikeIcon() })
+      .bindPopup(`<b>${s.name}</b><br>Date: ${s.date || '?'} ${s.time || ''}<br>Distance: <b>${formatDist(s.dist)}</b><br>Status: ${s.status}<br>${s.sources ? '<a href="' + s.sources.split(',')[0].trim() + '" target="_blank">Source</a>' : ''}`)
+      .addTo(map);
+    mapLayers.strikes.push(marker);
+
+    const line = L.polyline(
+      [[userLat, userLon], [s.lat, s.lon]],
+      { color: '#ff4444', weight: 1, opacity: 0.4, dashArray: '4,4' }
+    ).addTo(map);
+    mapLayers.strikes.push(line);
+
+    strikesList.innerHTML += `
+      <div class="item" onclick="map.flyTo([${s.lat},${s.lon}],15)">
+        <div class="item-name">${s.name}</div>
+        <div class="item-dist">${formatDist(s.dist)} ${t('fromYou')}</div>
+        <div class="item-date">${s.date || t('unknownDate')}${s.time ? ' ' + s.time : ''}</div>
+      </div>`;
+  });
+
+  if (nearbyStrikes.length === 0) {
+    strikesList.innerHTML = '<div class="loading">' + t('noStrikes') + ' ' + searchRadius + ' km</div>';
+  }
+
+  // Render targets
+  const targetsList = document.getElementById('targets-list');
+  targetsList.innerHTML = '';
+
+  nearbyTargets.forEach(tgt => {
+    const color = TYPE_COLORS[tgt.type] || TYPE_COLORS.default;
+    const size = ['nuclear', 'missile', 'military', 'airfield'].includes(tgt.type) ? 12 : 8;
+
+    const marker = L.marker([tgt.lat, tgt.lon], { icon: makeIcon(color, size) })
+      .bindPopup(`<b>${tgt.name}</b><br>Type: ${tgt.type}<br>Distance: <b>${formatDist(tgt.dist)}</b>`)
+      .addTo(map);
+    mapLayers.targets.push(marker);
+
+    const badgeClass = 'type-' + tgt.type;
+    targetsList.innerHTML += `
+      <div class="item" onclick="map.flyTo([${tgt.lat},${tgt.lon}],15)">
+        <div class="item-name">${tgt.name} <span class="type-badge ${badgeClass}">${tgt.type}</span></div>
+        <div class="item-dist">${formatDist(tgt.dist)} ${t('fromYou')}</div>
+      </div>`;
+  });
+
+  if (nearbyTargets.length === 0) {
+    targetsList.innerHTML = '<div class="loading">' + t('noTargets') + ' ' + searchRadius + ' km</div>';
+  }
+
+  // Stats
+  document.getElementById('stat-strikes').textContent = nearbyStrikes.length;
+  document.getElementById('stat-targets').textContent = nearbyTargets.length;
+  document.getElementById('stat-nearest').textContent = nearestStrike < Infinity ? nearestStrike.toFixed(1) : '—';
+  document.getElementById('strikes-count').textContent = nearbyStrikes.length;
+  document.getElementById('targets-count').textContent = nearbyTargets.length;
+
+  // Safety assessment
+  updateSafetyLevel(nearestStrike, nearbyStrikes.length, nearbyTargets.length);
+  buildFilterBar();
+}
+
+// ── Safety Level ──
+function updateSafetyLevel(nearestStrike, strikeCount, targetCount) {
+  const el = document.getElementById('safety-level');
+  const detail = document.getElementById('safety-detail');
+
+  let level, cls, msg;
+
+  if (nearestStrike < 2) {
+    level = t('criticalDanger'); cls = 'safety-critical';
+    msg = `${t('nearestStrike')}: ${formatDist(nearestStrike)} ${t('seekShelter')}`;
+  } else if (nearestStrike < 5) {
+    level = t('highRisk'); cls = 'safety-high';
+    msg = `${t('nearestStrike')}: ${formatDist(nearestStrike)}. ${t('stayAwayWindows')}`;
+  } else if (nearestStrike < 10) {
+    level = t('elevatedRisk'); cls = 'safety-elevated';
+    msg = `${t('nearestStrike')}: ${formatDist(nearestStrike)}. ${targetCount} ${t('stayAlert')}`;
+  } else if (nearestStrike < 20 || targetCount > 5) {
+    level = t('moderateRisk'); cls = 'safety-moderate';
+    msg = `${t('nearestStrike')}: ${formatDist(nearestStrike)}. ${targetCount} ${t('potentialTargets')}`;
+  } else {
+    level = t('lowerRisk'); cls = 'safety-low';
+    msg = strikeCount > 0
+      ? `${t('nearestStrike')}: ${formatDist(nearestStrike)}. ${t('relativelyDistant')}`
+      : `${t('noStrikes')} ${searchRadius} km. ${targetCount} ${t('potentialTargets')}`;
+  }
+
+  el.textContent = level;
+  el.className = 'safety-level ' + cls;
+  detail.textContent = msg;
+}
+
+// ── Section toggle ──
+function toggleSection(name) {
+  document.getElementById(name + '-body').classList.toggle('open');
+  document.getElementById(name + '-arrow').classList.toggle('open');
+}
+
+// ── Pulse animation ──
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.8); opacity: 0; } }
+  .dist-label { background: transparent !important; border: none !important; color: #e94560 !important; font-size: 11px !important; font-weight: bold; text-shadow: 0 0 4px #000; }
+`;
+document.head.appendChild(style);
+
+// ── Start ──
+const savedLang = localStorage.getItem('safety_tracker_lang');
+if (savedLang) { currentLang = savedLang; }
+init();
+if (currentLang !== 'en') setLang(currentLang);
+else applyTranslations();
+</script>
+</body>
+</html>
