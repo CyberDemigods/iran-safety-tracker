@@ -420,24 +420,8 @@ let userLat = null, userLon = null;
 let searchRadius = 30; // km
 const mapLayers = { strikes: [], targets: [], circles: [] };
 
-// MahsaAlert layer data
-const MAHSA_LAYERS_URL = 'https://api.mahsaalert.app/api/v1/layers';
-const MAHSA_STORAGE = 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/';
-let allStrikes = [];  // from layer 32
-let allTargets = [];  // from other layers
-
-const LAYER_CONFIG = {
-  1:  { type: 'basij',    name: 'Basij',              color: '#ff9100', size: 5 },
-  3:  { type: 'police',   name: 'Police',             color: '#2980b9', size: 5 },
-  5:  { type: 'prison',   name: 'Prison',             color: '#9c27b0', size: 5 },
-  6:  { type: 'nuclear',  name: 'Nuclear',            color: '#f39c12', size: 7 },
-  7:  { type: 'missile',  name: 'Missile Program',    color: '#f44336', size: 7 },
-  9:  { type: 'radar',    name: 'Radar',              color: '#00bcd4', size: 5 },
-  10: { type: 'airfield', name: 'Air/Drone Base',     color: '#d35400', size: 7 },
-  11: { type: 'military', name: 'Military (confirmed)', color: '#c0392b', size: 7 },
-  12: { type: 'military', name: 'Military (unconfirmed)', color: '#e57373', size: 5 },
-  32: { type: 'strike',   name: 'War Strikes',        color: '#ff1744', size: 9 },
-};
+let allStrikes = [];
+let allTargets = [];
 
 const TYPE_COLORS = {
   basij: '#ff9100', police: '#2980b9', prison: '#9c27b0', nuclear: '#f39c12',
@@ -606,21 +590,7 @@ function updateRadiusButtons() {
   });
 }
 
-// ── Load MahsaAlert Data ──
-// Known GeoJSON URLs (fallback if API fails due to CORS)
-const KNOWN_GEOJSON = {
-  1:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/1/basij.geojson',
-  3:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/3/marakez-entezami.geojson',
-  5:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/5/prison.geojson',
-  6:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/6/nuclear-program.geojson',
-  7:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/7/missile-program.geojson',
-  9:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/9/radar.geojson',
-  10: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/10/areoway.geojson',
-  11: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/11/military-base.geojson',
-  12: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/12/unknown-military.geojson',
-  32: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/32/targets-26-02.geojson',
-};
-
+// ── Load Data ──
 let dataLoadStatus = 'loading';
 
 function updateLoadStatus(msg) {
@@ -628,104 +598,25 @@ function updateLoadStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-async function corsProxy(url) {
-  // Try direct first
-  try {
-    const r = await fetch(url);
-    if (r.ok) return await r.json();
-  } catch (e) { /* CORS blocked, try proxy */ }
-  // Try allorigins proxy
-  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-  const r2 = await fetch(proxyUrl);
-  if (r2.ok) return await r2.json();
-  throw new Error('Both direct and proxy fetch failed for ' + url);
-}
-
-function parseGeoJSON(geojson, layerId) {
-  const config = LAYER_CONFIG[layerId];
-  if (!config) return;
-  const features = geojson.features || [];
-
-  features.forEach(feat => {
-    if (!feat.geometry || feat.geometry.type !== 'Point') return;
-    const [lon, lat] = feat.geometry.coordinates;
-    const props = feat.properties || {};
-
-    const item = {
-      lat, lon,
-      name: props['name:fa'] || props.name || 'Unknown',
-      type: config.type,
-      layerId,
-      status: props.status || '',
-      accurate: props.accurate || 'no',
-      sources: props.sources || '',
-      mahsaId: props.id || ''
-    };
-
-    if (layerId === 32) {
-      const ts = props.date;
-      if (ts) {
-        const unix = typeof ts === 'string' && ts.includes('-')
-          ? parseInt(ts.split('-')[0]) : parseInt(ts);
-        const d = new Date(unix * 1000);
-        item.date = d.toISOString().slice(0, 10);
-        item.time = d.toISOString().slice(11, 16);
-      } else {
-        item.date = '';
-        item.time = '';
-      }
-      allStrikes.push(item);
-    } else {
-      allTargets.push(item);
-    }
-  });
-}
-
 async function loadAllMahsaData() {
-  updateLoadStatus('Loading data from MahsaAlert...');
-  let layerUrls = {};
-  let loadedCount = 0;
-  const totalLayers = Object.keys(KNOWN_GEOJSON).length;
-
-  // Try API first to get fresh URLs
+  updateLoadStatus('Loading strike & target data...');
   try {
-    const result = await corsProxy(MAHSA_LAYERS_URL);
-    const layers = result.data || [];
-    layers.forEach(l => {
-      if (l.geojson && l.geojson.url && LAYER_CONFIG[l.id]) {
-        layerUrls[l.id] = l.geojson.url;
-      }
-    });
-    updateLoadStatus('API connected. Loading layers...');
+    const resp = await fetch('data.json?' + Date.now());
+    const data = await resp.json();
+
+    allStrikes = data.strikes || [];
+    allTargets = data.targets || [];
+    dataLoadStatus = 'loaded';
+
+    const updated = data.updated ? new Date(data.updated).toLocaleString() : 'unknown';
+    updateLoadStatus(`${allStrikes.length} strikes, ${allTargets.length} targets (updated: ${updated})`);
+
+    if (userLat !== null) renderAll();
   } catch (e) {
-    console.warn('API failed, using known URLs:', e);
-    updateLoadStatus('Using cached layer URLs...');
+    console.error('Failed to load data.json:', e);
+    updateLoadStatus('Failed to load data. Please refresh.');
+    dataLoadStatus = 'error';
   }
-
-  // Merge with known URLs as fallback
-  Object.keys(KNOWN_GEOJSON).forEach(id => {
-    if (!layerUrls[id]) layerUrls[id] = KNOWN_GEOJSON[id];
-  });
-
-  // Load all GeoJSON layers
-  const promises = Object.entries(layerUrls).map(async ([id, url]) => {
-    try {
-      const geojson = await corsProxy(url);
-      parseGeoJSON(geojson, parseInt(id));
-      loadedCount++;
-      updateLoadStatus(`Loading... ${loadedCount}/${totalLayers} layers`);
-    } catch (e) {
-      console.warn(`Failed to load layer ${id}:`, e);
-      loadedCount++;
-    }
-  });
-
-  await Promise.all(promises);
-  dataLoadStatus = 'loaded';
-  updateLoadStatus(`${allStrikes.length} strikes, ${allTargets.length} targets loaded`);
-  console.log(`Loaded ${allStrikes.length} strikes, ${allTargets.length} targets from MahsaAlert`);
-
-  if (userLat !== null) renderAll();
 }
 
 // ── Filters ──
