@@ -10,37 +10,38 @@
 body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; }
 
 #app { display: flex; height: 100vh; }
-#sidebar { width: 380px; background: #16213e; overflow-y: auto; border-right: 2px solid #0f3460; display: flex; flex-direction: column; }
+#sidebar { width: 420px; background: #16213e; overflow-y: auto; border-right: 2px solid #0f3460; display: flex; flex-direction: column; }
 #map { flex: 1; }
 
 .sidebar-header { padding: 16px; background: #0f3460; text-align: center; }
-.sidebar-header h1 { font-size: 17px; color: #e94560; margin-bottom: 4px; }
-.sidebar-header .subtitle { font-size: 11px; color: #888; line-height: 1.4; }
+.sidebar-header h1 { font-size: 20px; color: #e94560; margin-bottom: 6px; letter-spacing: 1px; }
+.sidebar-header .subtitle { font-size: 13px; color: #aaa; line-height: 1.5; }
 .sidebar-header a { color: #7ec8e3; text-decoration: none; }
 .sidebar-header a:hover { text-decoration: underline; }
 
 /* Location input */
 .location-box { padding: 14px 16px; background: #0d1b36; border-bottom: 1px solid #0f3460; }
-.location-box .label { font-size: 11px; color: #e94560; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-.location-box .hint { font-size: 11px; color: #666; margin-bottom: 8px; }
-.location-box .coord-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.location-box input { flex: 1; padding: 7px 10px; background: #1a1a40; border: 1px solid #333; color: #e0e0e0; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.location-box .label { font-size: 13px; color: #e94560; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700; }
+.location-box .hint { font-size: 13px; color: #999; margin-bottom: 8px; }
+.location-box .coord-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.location-box input { flex: 1; padding: 9px 12px; background: #1a1a40; border: 1px solid #444; color: #e0e0e0; border-radius: 4px; font-size: 14px; font-family: inherit; }
 .location-box input:focus { border-color: #e94560; outline: none; }
-.location-box button { width: 100%; padding: 8px; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+.location-box button { width: 100%; padding: 10px; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit; }
 .location-box button:hover { background: #c0392b; }
-.location-box .current-loc { font-size: 11px; color: #888; margin-top: 6px; text-align: center; }
+.location-box .current-loc { font-size: 13px; color: #aaa; margin-top: 8px; text-align: center; }
 .location-box .current-loc b { color: #e94560; }
 
 /* Stats */
 .stats { display: flex; gap: 0; text-align: center; border-bottom: 1px solid #0f3460; }
 .stat { flex: 1; padding: 10px 8px; border-right: 1px solid #0f3460; }
 .stat:last-child { border-right: none; }
-.stat .stat-val { font-size: 20px; font-weight: 700; color: #e94560; }
-.stat .stat-label { font-size: 9px; color: #666; text-transform: uppercase; }
+.stat .stat-val { font-size: 24px; font-weight: 700; color: #e94560; }
+.stat .stat-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Safety indicator */
 .safety-bar { padding: 12px 16px; border-bottom: 1px solid #0f3460; text-align: center; }
-.safety-level { font-size: 16px; font-weight: 700; padding: 8px 16px; border-radius: 6px; display: inline-block; }
+.safety-level { font-size: 18px; font-weight: 700; padding: 10px 20px; border-radius: 6px; display: inline-block; letter-spacing: 1px; }
+.safety-bar .safety-detail { font-size: 13px; color: #aaa; }
 .safety-critical { background: #c0392b; color: #fff; }
 .safety-high { background: #e74c3c; color: #fff; }
 .safety-elevated { background: #f39c12; color: #000; }
@@ -52,24 +53,24 @@ body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0;
 .section { border-bottom: 1px solid #0f3460; }
 .section-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
 .section-header:hover { background: #1a1a40; }
-.section-header h2 { font-size: 14px; color: #e94560; margin: 0; display: flex; align-items: center; gap: 8px; }
-.section-header .count { background: #e94560; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.section-header h2 { font-size: 16px; color: #e94560; margin: 0; display: flex; align-items: center; gap: 8px; }
+.section-header .count { background: #e94560; color: #fff; font-size: 12px; padding: 2px 10px; border-radius: 10px; font-weight: 700; }
 .section-header .arrow { color: #e94560; font-size: 12px; transition: transform 0.2s; }
 .section-header .arrow.open { transform: rotate(90deg); }
 .section-body { padding: 0 16px 12px; display: none; }
 .section-body.open { display: block; }
 
 /* Items */
-.item { background: #1a1a40; border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s; font-size: 13px; }
-.item:hover { background: #233; }
-.item .item-name { font-weight: 600; }
-.item .item-dist { color: #e94560; font-size: 12px; margin-top: 2px; }
-.item .item-date { color: #888; font-size: 11px; }
-.item .item-src { color: #666; font-size: 11px; font-style: italic; }
+.item { background: #1a1a40; border-radius: 6px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s; font-size: 14px; border-left: 3px solid #333; }
+.item:hover { background: #233; border-left-color: #e94560; }
+.item .item-name { font-weight: 600; font-size: 14px; color: #fff; }
+.item .item-dist { color: #e94560; font-size: 14px; margin-top: 4px; font-weight: 600; }
+.item .item-date { color: #aaa; font-size: 13px; margin-top: 2px; }
+.item .item-src { color: #888; font-size: 12px; font-style: italic; }
 
 /* Filter bar */
 .filter-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.filter-btn { padding: 3px 8px; font-size: 10px; border: 1px solid #333; background: #1a1a40; color: #aaa; border-radius: 3px; cursor: pointer; }
+.filter-btn { padding: 5px 10px; font-size: 12px; border: 1px solid #333; background: #1a1a40; color: #aaa; border-radius: 4px; cursor: pointer; }
 .filter-btn.active { border-color: #e94560; color: #fff; }
 .filter-btn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
@@ -99,26 +100,29 @@ body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0;
 
 /* Legend */
 .legend { padding: 12px 16px; border-top: 1px solid #0f3460; margin-top: auto; }
-.legend h3 { font-size: 12px; color: #888; margin-bottom: 6px; }
-.legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 3px; }
+.legend h3 { font-size: 14px; color: #999; margin-bottom: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; color: #ccc; }
 .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
 
 /* Loading */
-.loading { padding: 12px 16px; text-align: center; color: #888; font-size: 12px; }
+.loading { padding: 12px 16px; text-align: center; color: #aaa; font-size: 13px; }
 
 /* Radius selector */
 .radius-select { display: flex; gap: 0; margin-bottom: 6px; }
-.radius-btn { flex: 1; padding: 5px 0; font-size: 11px; border: 1px solid #0f3460; background: #1a1a40; color: #888; cursor: pointer; font-family: inherit; }
+.radius-btn { flex: 1; padding: 7px 0; font-size: 13px; border: 1px solid #0f3460; background: #1a1a40; color: #888; cursor: pointer; font-family: inherit; }
 .radius-btn:first-child { border-radius: 4px 0 0 4px; }
 .radius-btn:last-child { border-radius: 0 4px 4px 0; }
 .radius-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
 
 /* Language switcher */
-.lang-switch { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; gap: 0; }
-.lang-btn { padding: 6px 12px; font-size: 12px; border: 1px solid #0f3460; background: #16213e; color: #888; cursor: pointer; font-family: inherit; }
+.lang-switch { display: flex; gap: 0; justify-content: center; margin-top: 8px; }
+.lang-btn { padding: 5px 16px; font-size: 12px; border: 1px solid #0f3460; background: #1a1a40; color: #888; cursor: pointer; font-family: inherit; }
 .lang-btn:first-child { border-radius: 4px 0 0 4px; }
 .lang-btn:last-child { border-radius: 0 4px 4px 0; }
 .lang-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+/* Load status */
+.load-status { padding: 6px 16px; text-align: center; font-size: 12px; color: #888; background: #0d1b36; border-bottom: 1px solid #0f3460; }
 
 /* RTL support */
 html[dir="rtl"] #sidebar { border-right: none; border-left: 2px solid #0f3460; }
@@ -141,7 +145,13 @@ html[dir="rtl"] .stat-val { direction: ltr; }
       <div class="subtitle">How safe is your area? Set your location and see nearby threats.<br>
       Data: <a href="https://mahsaalert.app" target="_blank">MahsaAlert</a> |
       <a href="https://iranrevolution26.com" target="_blank">iranrevolution26.com</a></div>
+      <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLang('en')">English</button>
+        <button class="lang-btn" onclick="setLang('fa')">فارسی</button>
+      </div>
     </div>
+
+    <div class="load-status" id="load-status">Loading data...</div>
 
     <div class="location-box">
       <div class="label">Your Location</div>
@@ -216,12 +226,7 @@ html[dir="rtl"] .stat-val { direction: ltr; }
       <div class="legend-item" style="margin-top:8px; font-size:10px; color:#666;">Data: MahsaAlert.app | No data is stored or sent</div>
     </div>
   </div>
-  <div id="map">
-    <div class="lang-switch">
-      <button class="lang-btn active" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" onclick="setLang('fa')">فارسی</button>
-    </div>
-  </div>
+  <div id="map"></div>
 </div>
 
 <!-- Onboarding overlay -->
@@ -602,68 +607,125 @@ function updateRadiusButtons() {
 }
 
 // ── Load MahsaAlert Data ──
-async function loadAllMahsaData() {
+// Known GeoJSON URLs (fallback if API fails due to CORS)
+const KNOWN_GEOJSON = {
+  1:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/1/basij.geojson',
+  3:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/3/marakez-entezami.geojson',
+  5:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/5/prison.geojson',
+  6:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/6/nuclear-program.geojson',
+  7:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/7/missile-program.geojson',
+  9:  'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/9/radar.geojson',
+  10: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/10/areoway.geojson',
+  11: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/11/military-base.geojson',
+  12: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/12/unknown-military.geojson',
+  32: 'https://mahsaalert.hel1.your-objectstorage.com/prod/sources/layers/32/targets-26-02.geojson',
+};
+
+let dataLoadStatus = 'loading';
+
+function updateLoadStatus(msg) {
+  const el = document.getElementById('load-status');
+  if (el) el.textContent = msg;
+}
+
+async function corsProxy(url) {
+  // Try direct first
   try {
-    const resp = await fetch(MAHSA_LAYERS_URL);
-    const result = await resp.json();
+    const r = await fetch(url);
+    if (r.ok) return await r.json();
+  } catch (e) { /* CORS blocked, try proxy */ }
+  // Try allorigins proxy
+  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const r2 = await fetch(proxyUrl);
+  if (r2.ok) return await r2.json();
+  throw new Error('Both direct and proxy fetch failed for ' + url);
+}
+
+function parseGeoJSON(geojson, layerId) {
+  const config = LAYER_CONFIG[layerId];
+  if (!config) return;
+  const features = geojson.features || [];
+
+  features.forEach(feat => {
+    if (!feat.geometry || feat.geometry.type !== 'Point') return;
+    const [lon, lat] = feat.geometry.coordinates;
+    const props = feat.properties || {};
+
+    const item = {
+      lat, lon,
+      name: props['name:fa'] || props.name || 'Unknown',
+      type: config.type,
+      layerId,
+      status: props.status || '',
+      accurate: props.accurate || 'no',
+      sources: props.sources || '',
+      mahsaId: props.id || ''
+    };
+
+    if (layerId === 32) {
+      const ts = props.date;
+      if (ts) {
+        const unix = typeof ts === 'string' && ts.includes('-')
+          ? parseInt(ts.split('-')[0]) : parseInt(ts);
+        const d = new Date(unix * 1000);
+        item.date = d.toISOString().slice(0, 10);
+        item.time = d.toISOString().slice(11, 16);
+      } else {
+        item.date = '';
+        item.time = '';
+      }
+      allStrikes.push(item);
+    } else {
+      allTargets.push(item);
+    }
+  });
+}
+
+async function loadAllMahsaData() {
+  updateLoadStatus('Loading data from MahsaAlert...');
+  let layerUrls = {};
+  let loadedCount = 0;
+  const totalLayers = Object.keys(KNOWN_GEOJSON).length;
+
+  // Try API first to get fresh URLs
+  try {
+    const result = await corsProxy(MAHSA_LAYERS_URL);
     const layers = result.data || [];
-
-    // Load all layers in parallel
-    const promises = layers
-      .filter(l => l.geojson && l.geojson.url && LAYER_CONFIG[l.id])
-      .map(async (layer) => {
-        try {
-          const r = await fetch(layer.geojson.url);
-          const geojson = await r.json();
-          const config = LAYER_CONFIG[layer.id];
-          const features = geojson.features || [];
-
-          features.forEach(feat => {
-            if (!feat.geometry || feat.geometry.type !== 'Point') return;
-            const [lon, lat] = feat.geometry.coordinates;
-            const props = feat.properties || {};
-
-            const item = {
-              lat, lon,
-              name: props['name:fa'] || props.name || 'Unknown',
-              type: config.type,
-              layerId: layer.id,
-              status: props.status || '',
-              accurate: props.accurate || 'no',
-              sources: props.sources || '',
-              mahsaId: props.id || ''
-            };
-
-            // Parse date for strikes
-            if (layer.id === 32) {
-              const ts = props.date;
-              if (ts) {
-                const unix = typeof ts === 'string' && ts.includes('-')
-                  ? parseInt(ts.split('-')[0]) : parseInt(ts);
-                const d = new Date(unix * 1000);
-                item.date = d.toISOString().slice(0, 10);
-                item.time = d.toISOString().slice(11, 16);
-              } else {
-                item.date = '';
-                item.time = '';
-              }
-              allStrikes.push(item);
-            } else {
-              allTargets.push(item);
-            }
-          });
-        } catch (e) {
-          console.warn(`Failed to load layer ${layer.id}:`, e);
-        }
-      });
-
-    await Promise.all(promises);
-    console.log(`Loaded ${allStrikes.length} strikes, ${allTargets.length} targets from MahsaAlert`);
-
-    if (userLat !== null) renderAll();
+    layers.forEach(l => {
+      if (l.geojson && l.geojson.url && LAYER_CONFIG[l.id]) {
+        layerUrls[l.id] = l.geojson.url;
+      }
+    });
+    updateLoadStatus('API connected. Loading layers...');
   } catch (e) {
-    console.error('MahsaAlert API error:', e);
+    console.warn('API failed, using known URLs:', e);
+    updateLoadStatus('Using cached layer URLs...');
   }
+
+  // Merge with known URLs as fallback
+  Object.keys(KNOWN_GEOJSON).forEach(id => {
+    if (!layerUrls[id]) layerUrls[id] = KNOWN_GEOJSON[id];
+  });
+
+  // Load all GeoJSON layers
+  const promises = Object.entries(layerUrls).map(async ([id, url]) => {
+    try {
+      const geojson = await corsProxy(url);
+      parseGeoJSON(geojson, parseInt(id));
+      loadedCount++;
+      updateLoadStatus(`Loading... ${loadedCount}/${totalLayers} layers`);
+    } catch (e) {
+      console.warn(`Failed to load layer ${id}:`, e);
+      loadedCount++;
+    }
+  });
+
+  await Promise.all(promises);
+  dataLoadStatus = 'loaded';
+  updateLoadStatus(`${allStrikes.length} strikes, ${allTargets.length} targets loaded`);
+  console.log(`Loaded ${allStrikes.length} strikes, ${allTargets.length} targets from MahsaAlert`);
+
+  if (userLat !== null) renderAll();
 }
 
 // ── Filters ──
@@ -679,10 +741,10 @@ function buildFilterBar() {
   const types = ['military', 'police', 'basij', 'nuclear', 'missile', 'radar', 'airfield', 'prison'];
   const labels = t('filterLabels');
   const bar = document.getElementById('filter-bar');
-  bar.innerHTML = types.map(t => {
-    const color = TYPE_COLORS[t] || '#888';
-    const active = activeFilters.has(t) ? ' active' : '';
-    return `<button class="filter-btn${active}" onclick="event.stopPropagation();toggleFilter('${t}')"><span class="dot" style="background:${color}"></span>${labels[t]}</button>`;
+  bar.innerHTML = types.map(tp => {
+    const color = TYPE_COLORS[tp] || '#888';
+    const active = activeFilters.has(tp) ? ' active' : '';
+    return `<button class="filter-btn${active}" onclick="event.stopPropagation();toggleFilter('${tp}')"><span class="dot" style="background:${color}"></span>${labels[tp]}</button>`;
   }).join('');
 }
 
